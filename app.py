@@ -211,3 +211,83 @@ def delete_product(id):
     db.session.commit()
     return jsonify({'message': f'Successfully deleted product {id}'}), 200
 
+#----ORDER ENDPOINTS----
+# Create an Order
+@app.route('/orders', methods=['POST'])
+def create_order():
+    try:
+        order_data = order_schema.load(request.json)
+    except ValidationError as e:
+        return jsonify(e.messages), 400
+    
+    new_order = Order(
+        user_id = order_data['user_id']
+    )
+    
+    if 'order_date' in order_data and order_data['order_date']:
+        new_order.order_date = order_data['order_date']
+    
+    db.session.add(new_order)
+    db.session.commit()
+    
+    return order_schema.jsonify(new_order), 201
+
+# Add a product to an order (prevent duplicates)
+@app.route('/orders/<order_id>/add_product/<product_id>', methods=['PUT'])
+def add_product_to_order(order_id, product_id):
+    order = db.session.get(Order, order_id)
+    product = db.session.get(Product, product_id)
+    
+    if not order or not product:
+        return jsonify({'message': 'Order or Product not found.'}), 404
+    
+    if product in order.products:
+        return jsonify({'message': f'Product "{product.product_name}" is already in order #{order.id}'}), 400
+    
+    order.products.append(product)
+    db.session.commit()
+    return jsonify({'message': f'Sucessfully added {product.product_name} to order #{order_id}!'}), 200
+
+# Remove a Product from an Order
+@app.route('/orders/<order_id>/remove_product/<product_id>', methods=['DELETE'])
+def delete_product_from_order(order_id, product_id):
+    order = db.session.get(Order, order_id)
+    product = db.session.get(Product, product_id)
+    
+    if not order or not product:
+        return jsonify({'message': 'Order or Product not found.'}), 404
+    
+    if product not in order.products:
+        return jsonify({'message': f'Product "{product.product_name}" is not part of order #{order_id}.'}), 400
+    
+    order.products.remove(product)
+    db.session.commit()
+    return jsonify({'message': f'Successfully removed product "{product.product_name}" from order #{order.id}!'}), 200
+
+# Get all Orders for a User
+@app.route('/orders/user/<int:user_id>', methods=['GET'])
+def get_all_orders_for_user(user_id):
+
+    user = db.session.get(User, user_id)
+    
+    if not user:
+        return jsonify({'message': 'User not found'}), 404
+    
+    if not user.user_orders:
+        return jsonify({'message': 'No orders found for this user.'}), 200
+    
+    return orders_schema.jsonify(user.user_orders), 200
+    
+# Get all Products for an Order
+@app.route('/orders/<int:order_id>/products', methods=['GET'])
+def get_all_products_in_order(order_id):
+    
+    order = db.session.get(Order, order_id)
+    
+    if not order:
+        return jsonify({'message': 'Order not found.'}), 404
+    
+    if not order.products:
+        return jsonify({'message': f'Order #{order_id} has no products.'}), 200
+    
+    return products_schema.jsonify(order.products), 200
