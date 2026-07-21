@@ -150,3 +150,64 @@ def delete_user(id):
     db.session.delete(user)
     db.session.commit()
     return jsonify({'message': f'Successfully deleted user {id}'}), 200
+
+#-----PRODUCT ENDPOINTS------
+# Create a Product
+@app.route('/products', methods=['POST'])
+def create_product():
+    try:
+        product_data = product_schema.load(request.json)
+    except ValidationError as e:
+        return jsonify(e.messages), 400
+    
+    new_product = Product(name=product_data['name'], price=product_data['price'], )
+    db.session.add(new_product)
+    db.session.commit()
+    
+    return user_schema.jsonify(new_product), 201
+
+# Retrieve All Products
+@app.route('/products', methods=['GET'])
+def get_products():
+    query = select(Product)
+    products = db.session.execute(query).scalars().all()
+    
+    return products_schema.jsonify(products), 200
+
+# Retrieve a SINGLE Product by ID
+@app.route('/products/<int:id>', methods=['GET'])
+def get_product(id):
+    product = db.session.get(Product, id)
+    return product_schema.jsonify(product), 200
+
+# Update Product
+@app.route('/products/<int:id>', methods=['PUT'])
+def update_product(id):
+    product = db.session.get(Product, id)
+    
+    if not product:
+        return jsonify({'message': 'Invalid product id'}), 400
+    
+    try:
+        product_data = product_schema.load(request.json)
+    except ValidationError as e:
+        return jsonify(e.messages), 400
+    
+    product.name = product_data['name']
+    product.price = product_data['price']
+    
+    db.session.commit()
+    return product_schema.jsonify(product), 200
+
+# Delete Product
+@app.route('/products/<int:id>', methods=['DELETE'])
+def delete_product(id):
+    product = db.session.get(Product, id)
+    
+    if not product:
+        return jsonify({'message': 'Invalid product id'}), 400
+    
+    db.session.delete(product)
+    db.session.commit()
+    return jsonify({'message': f'Successfully deleted product {id}'}), 200
+
