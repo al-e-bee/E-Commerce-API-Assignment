@@ -28,7 +28,7 @@ ma = Marshmallow(app)
 order_product = Table(
     'order_product',
     Base.metadata,
-    Column('user_id', ForeignKey('users.id'), primary_key=True),
+    Column('order_id', ForeignKey('orders.id'), primary_key=True),
     Column('product_id', ForeignKey('products.id'), primary_key=True)
 )
 
@@ -41,17 +41,17 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
     
     # One-to-Many Relationship: User to Orders
-    user_orders: Mapped[List['Order']] = relationship(back_populates='orders', cascade='all, delete-orphan')
+    user_orders: Mapped[List['Order']] = relationship(back_populates='user', cascade='all, delete-orphan')
     
 class Order(Base):
     __tablename__ = 'orders'
     id: Mapped[int] = mapped_column(primary_key=True)
-    order_date = Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    user_id: Mapped[int] = mapped_column(ForeignKey='users.id')
+    order_date: Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    user_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
     
     # Many-to-Many: Orders to User
     user: Mapped['User'] = relationship(back_populates='user_orders')
-    product: Mapped['Product'] = relationship(back_populates='product_in_orders')
+    products: Mapped[List['Product']] = relationship(secondary=order_product,back_populates='product_in_orders')
     
 class Product(Base):
     __tablename__ = 'products'
@@ -59,7 +59,7 @@ class Product(Base):
     product_name: Mapped[str] = mapped_column(String(100))
     price: Mapped[float] = mapped_column(Float)
     # Relationship: Product to Order
-    product_in_orders: Mapped[List['Order']] = relationship(back_populates='product')
+    product_in_orders: Mapped[List['Order']] = relationship(secondary=order_product,back_populates='products')
     
 # User Schema
 class UserSchema(ma.SQLAlchemyAutoSchema):
@@ -72,8 +72,20 @@ class OrderSchema(ma.SQLAlchemyAutoSchema):
         model = Order
         include_fk = True
         
+# Product Schema
+class ProductSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Product
+
+        
 # Initialize Schemas
 user_schema = UserSchema()
 users_schema = UserSchema(many=True)
 order_schema = OrderSchema()
 orders_schema = OrderSchema(many=True)
+product_schema = ProductSchema()
+products_schema = ProductSchema(many=True)
+
+#===========================
+# IMPLEMENT CRUD ENDPOINTS
+#===========================
