@@ -291,3 +291,13 @@ def get_all_products_in_order(order_id):
         return jsonify({'message': f'Order #{order_id} has no products.'}), 200
     
     return products_schema.jsonify(order.products), 200
+
+
+if __name__ == '__main__':
+    
+    with app.app_context():
+        #db.drop_all()
+        db.create_all()
+        
+    app.run(debug=True)
+    
