@@ -1,0 +1,79 @@
+from __future__ import annotations
+import datetime
+from flask import Flask, request, jsonify
+from flask_sqlalchemy import SQLAlchemy
+from flask_marshmallow import Marshmallow
+from sqlalchemy.orm import DeclarativeBase, relationship, mapped_column, Mapped
+from sqlalchemy import ForeignKey, Table, Column, String, Integer, select, DateTime, func, Float
+from marshmallow import ValidationError
+from typing import List, Optional
+import os
+
+# Initialize app
+app = Flask(__name__)
+
+# MySQL Database Configuration
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:*D3tr01t26!*@localhost/ecommerce_api'
+
+# Create Base Model
+class Base(DeclarativeBase):
+    pass
+
+# Initialize SQLAlchemy and Marshmallow
+db = SQLAlchemy(model_class=Base)
+db.init_app(app)
+ma = Marshmallow(app)
+
+# Association Table
+order_product = Table(
+    'order_product',
+    Base.metadata,
+    Column('user_id', ForeignKey('users.id'), primary_key=True),
+    Column('product_id', ForeignKey('products.id'), primary_key=True)
+)
+
+# Models
+class User(Base):
+    __tablename__ = 'users'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(50), nullable=False)
+    address: Mapped[str] = mapped_column(String(150))
+    email: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
+    
+    # One-to-Many Relationship: User to Orders
+    user_orders: Mapped[List['Order']] = relationship(back_populates='orders', cascade='all, delete-orphan')
+    
+class Order(Base):
+    __tablename__ = 'orders'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    order_date = Mapped[datetime.datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    user_id: Mapped[int] = mapped_column(ForeignKey='users.id')
+    
+    # Many-to-Many: Orders to User
+    user: Mapped['User'] = relationship(back_populates='user_orders')
+    product: Mapped['Product'] = relationship(back_populates='product_in_orders')
+    
+class Product(Base):
+    __tablename__ = 'products'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    product_name: Mapped[str] = mapped_column(String(100))
+    price: Mapped[float] = mapped_column(Float)
+    # Relationship: Product to Order
+    product_in_orders: Mapped[List['Order']] = relationship(back_populates='product')
+    
+# User Schema
+class UserSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = User
+        
+# Order Schema
+class OrderSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Order
+        include_fk = True
+        
+# Initialize Schemas
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
+order_schema = OrderSchema()
+orders_schema = OrderSchema(many=True)
