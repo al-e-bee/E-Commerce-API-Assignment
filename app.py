@@ -241,7 +241,7 @@ def create_order():
     return order_schema.jsonify(new_order), 201
 
 # Add a product to an order (prevent duplicates)
-@app.route('/orders/<int:order_id>/add_product/<product_id>', methods=['PUT'])
+@app.route('/orders/<int:order_id>/add_product/<int:product_id>', methods=['PUT'])
 def add_product_to_order(order_id, product_id):
     order = db.session.get(Order, order_id)
     product = db.session.get(Product, product_id)
@@ -257,7 +257,7 @@ def add_product_to_order(order_id, product_id):
     return jsonify({'message': f'Sucessfully added {product.product_name} to order #{order_id}!'}), 200
 
 # Remove a Product from an Order
-@app.route('/orders/<int:order_id>/remove_product/<product_id>', methods=['DELETE'])
+@app.route('/orders/<int:order_id>/remove_product/<int:product_id>', methods=['DELETE'])
 def delete_product_from_order(order_id, product_id):
     order = db.session.get(Order, order_id)
     product = db.session.get(Product, product_id)
