@@ -117,6 +117,10 @@ def get_users():
 @app.route('/users/<int:id>', methods=['GET'])
 def get_user(id):
     user = db.session.get(User, id)
+    
+    if not user:
+        return jsonify({'message': 'Invalid user id'}), 400
+    
     return user_schema.jsonify(user), 200
 
 # Update User
@@ -160,11 +164,11 @@ def create_product():
     except ValidationError as e:
         return jsonify(e.messages), 400
     
-    new_product = Product(name=product_data['name'], price=product_data['price'], )
+    new_product = Product(product_name=product_data['product_name'], price=product_data['price'], )
     db.session.add(new_product)
     db.session.commit()
     
-    return user_schema.jsonify(new_product), 201
+    return product_schema.jsonify(new_product), 201
 
 # Retrieve All Products
 @app.route('/products', methods=['GET'])
@@ -178,6 +182,10 @@ def get_products():
 @app.route('/products/<int:id>', methods=['GET'])
 def get_product(id):
     product = db.session.get(Product, id)
+    
+    if not product:
+        return jsonify({'message': 'Invalid product id'}), 404
+    
     return product_schema.jsonify(product), 200
 
 # Update Product
@@ -193,7 +201,7 @@ def update_product(id):
     except ValidationError as e:
         return jsonify(e.messages), 400
     
-    product.name = product_data['name']
+    product.product_name = product_data['product_name']
     product.price = product_data['price']
     
     db.session.commit()
@@ -233,7 +241,7 @@ def create_order():
     return order_schema.jsonify(new_order), 201
 
 # Add a product to an order (prevent duplicates)
-@app.route('/orders/<order_id>/add_product/<product_id>', methods=['PUT'])
+@app.route('/orders/<int:order_id>/add_product/<product_id>', methods=['PUT'])
 def add_product_to_order(order_id, product_id):
     order = db.session.get(Order, order_id)
     product = db.session.get(Product, product_id)
@@ -249,7 +257,7 @@ def add_product_to_order(order_id, product_id):
     return jsonify({'message': f'Sucessfully added {product.product_name} to order #{order_id}!'}), 200
 
 # Remove a Product from an Order
-@app.route('/orders/<order_id>/remove_product/<product_id>', methods=['DELETE'])
+@app.route('/orders/<int:order_id>/remove_product/<product_id>', methods=['DELETE'])
 def delete_product_from_order(order_id, product_id):
     order = db.session.get(Order, order_id)
     product = db.session.get(Product, product_id)
